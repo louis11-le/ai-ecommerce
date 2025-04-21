@@ -8,20 +8,25 @@ from langchain_huggingface import HuggingFaceEmbeddings  # Updated embeddings im
 
 
 def get_faq_agent():
-    # Load FAQ documents from CSV
-    loader = CSVLoader(file_path="data/faq.csv")
-    documents = loader.load()
-
     # Create embeddings using a free Hugging Face model
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
-    # Build a persistent Chroma vector store from the documents
-    vectorstore = Chroma.from_documents(
-        documents, embedding=embeddings, persist_directory="chroma_db"
-    )
-    vectorstore.persist()
+    # Check if vector store exists, if not create it
+    if not os.path.exists("chroma_db"):
+        # Load FAQ documents from CSV
+        loader = CSVLoader(file_path="data/faq.csv")
+        documents = loader.load()
+        vectorstore = Chroma.from_documents(
+            documents, embedding=embeddings, persist_directory="chroma_db"
+        )
+        vectorstore.persist()
+    else:
+        # Load existing vector store
+        vectorstore = Chroma(
+            persist_directory="chroma_db", embedding_function=embeddings
+        )
 
     # Create a retriever from the vector store
     retriever = vectorstore.as_retriever(search_kwargs={"k": 1})
